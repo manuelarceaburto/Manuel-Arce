@@ -1,0 +1,82 @@
+@model IEnumerable<CustomerViewModel>
+@{
+    ViewData["Title"] = "Manage Customers";
+}
+
+<div class="page-header">
+    <h1>Manage Customers</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <span style="font-size: 1.2rem; margin-right: 0.5rem;">+</span> Add Customer
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card text-center" style="padding: 3rem;">
+        <h3>No Customers Found</h3>
+        <p class="text-muted mt-2">Add your first customer to get started</p>
+        <div class="mt-3">
+            <a asp-action="Create" class="btn btn-primary btn-lg">Add Customer</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Tenant ID</th>
+                    <th>Resources</th>
+                    <th>Last Synced</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in Model)
+                {
+                    <tr>
+                        <td><strong>@customer.Name</strong></td>
+                        <td>@customer.TenantId</td>
+                        <td>
+                            <span class="badge badge-primary">@customer.ResourceCount resources</span>
+                        </td>
+                        <td>
+                            @if (customer.LastSyncedAt.HasValue)
+                            {
+                                <span data-date="@customer.LastSyncedAt.Value.ToString("o")">
+                                    @customer.LastSyncedAt.Value.ToString("g")
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="text-warning">Never</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button onclick="syncCustomerResources(@customer.Id, '@customer.Name')"
+                                        class="btn btn-success btn-sm">
+                                    Sync
+                                </button>
+                                <a asp-controller="Inventory" asp-action="Index" asp-route-customerId="@customer.Id"
+                                   class="btn btn-primary btn-sm">
+                                    View
+                                </a>
+                                <a asp-action="Edit" asp-route-id="@customer.Id" class="btn btn-secondary btn-sm">
+                                    Edit
+                                </a>
+                                <form asp-action="Delete" asp-route-id="@customer.Id" method="post" style="display: inline;"
+                                      onsubmit="return confirmDelete('Are you sure you want to delete @customer.Name?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

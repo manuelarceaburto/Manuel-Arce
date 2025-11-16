@@ -1,0 +1,183 @@
+@model VirtualMachineMetricsViewModel
+@{
+    ViewData["Title"] = $"{Model.VmDetails.Name} - Metrics";
+    var customerId = (int)ViewData["CustomerId"]!;
+}
+
+<div class="page-header">
+    <div>
+        <h1>@Model.VmDetails.Name</h1>
+        <p class="text-muted">Virtual Machine Metrics - Last 24 Hours</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" asp-route-customerId="@customerId" class="btn btn-secondary">
+            Back to VMs
+        </a>
+    </div>
+</div>
+
+<!-- VM Details Card -->
+<div class="card">
+    <div class="card-header">Virtual Machine Details</div>
+    <div class="card-body">
+        <div class="stats-grid">
+            <div>
+                <p class="text-muted mb-1">Resource Group</p>
+                <p><strong>@Model.VmDetails.ResourceGroup</strong></p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">Location</p>
+                <p><strong>@Model.VmDetails.Location</strong></p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">VM Size</p>
+                <p>
+                    @if (!string.IsNullOrEmpty(Model.VmDetails.VmSize))
+                    {
+                        <span class="badge badge-secondary">@Model.VmDetails.VmSize</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Unknown</span>
+                    }
+                </p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">OS Type</p>
+                <p>
+                    @if (!string.IsNullOrEmpty(Model.VmDetails.OsType))
+                    {
+                        <span class="badge badge-primary">@Model.VmDetails.OsType</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Unknown</span>
+                    }
+                </p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">Power State</p>
+                <p>
+                    @if (!string.IsNullOrEmpty(Model.VmDetails.PowerState))
+                    {
+                        var badgeClass = Model.VmDetails.PowerState.Contains("running", StringComparison.OrdinalIgnoreCase) ? "badge-success" : "badge-secondary";
+                        <span class="badge @badgeClass">@Model.VmDetails.PowerState</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Unknown</span>
+                    }
+                </p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">Public IP</p>
+                <p>
+                    @if (Model.VmDetails.HasPublicIp)
+                    {
+                        <span class="badge badge-warning">@Model.VmDetails.PublicIpAddress</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">No Public IP</span>
+                    }
+                </p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">Backup Status</p>
+                <p>
+                    @if (Model.VmDetails.BackupEnabled)
+                    {
+                        <span class="badge badge-success">Enabled</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-danger">Disabled</span>
+                    }
+                </p>
+            </div>
+            <div>
+                <p class="text-muted mb-1">Disks</p>
+                <p><span class="badge badge-secondary">@Model.VmDetails.Disks.Count disks</span></p>
+            </div>
+        </div>
+
+        @if (Model.VmDetails.Disks.Any())
+        {
+            <div class="mt-3">
+                <p class="text-muted mb-2"><strong>Disk Details:</strong></p>
+                <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary);">
+                    @foreach (var disk in Model.VmDetails.Disks)
+                    {
+                        <li>@disk</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (Model.VmDetails.NetworkInterfaces.Any())
+        {
+            <div class="mt-3">
+                <p class="text-muted mb-2"><strong>Network Interfaces:</strong></p>
+                <ul style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary);">
+                    @foreach (var nic in Model.VmDetails.NetworkInterfaces)
+                    {
+                        <li>@nic</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Metrics Charts -->
+@if (Model.Metrics.Any())
+{
+    <div class="mt-4">
+        <h2 class="mb-3">Performance Metrics (Last 24 Hours)</h2>
+
+        @foreach (var metric in Model.Metrics)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@metric.MetricName (@metric.Unit)</div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="metric-@metric.MetricName.Replace(" ", "-")"></canvas>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card mt-4 text-center" style="padding: 3rem;">
+        <h3>No Metrics Available</h3>
+        <p class="text-muted mt-2">
+            Metrics data is not available for this virtual machine. This could be because:
+        </p>
+        <ul style="text-align: left; max-width: 600px; margin: 1rem auto; color: var(--text-secondary);">
+            <li>The VM is not running</li>
+            <li>Diagnostics are not enabled</li>
+            <li>Insufficient permissions to read metrics</li>
+            <li>The VM was recently created</li>
+        </ul>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.Metrics.Any())
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                @foreach (var metric in Model.Metrics)
+                {
+                    var metricDataJson = System.Text.Json.JsonSerializer.Serialize(metric);
+                    <text>
+                    var metricData_@metric.MetricName.Replace(" ", "_") = @Html.Raw(metricDataJson);
+                    initializeMetricsChart('metric-@metric.MetricName.Replace(" ", "-")', metricData_@metric.MetricName.Replace(" ", "_"));
+                    </text>
+                }
+            });
+        </script>
+    }
+}

@@ -1,0 +1,184 @@
+@model InventoryViewModel
+@{
+    ViewData["Title"] = $"{Model.CustomerName} - Inventory";
+}
+
+<div class="page-header">
+    <div>
+        <h1>@Model.CustomerName</h1>
+        <p class="text-muted">
+            Last synced:
+            @if (Model.LastSyncedAt.HasValue)
+            {
+                <span data-date="@Model.LastSyncedAt.Value.ToString("o")">
+                    @Model.LastSyncedAt.Value.ToString("g")
+                </span>
+            }
+            else
+            {
+                <span class="text-warning">Never</span>
+            }
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="VM" asp-action="Index" asp-route-customerId="@Model.CustomerId" class="btn btn-primary">
+            View Virtual Machines
+        </a>
+        <button onclick="syncCustomerResources(@Model.CustomerId, '@Model.CustomerName')" class="btn btn-success">
+            Sync Resources
+        </button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">
+            Back to Customers
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>@Model.TotalResources</h3>
+        <p>Total Resources</p>
+    </div>
+    <div class="stat-card">
+        <h3>@Model.VirtualMachineCount</h3>
+        <p>Virtual Machines</p>
+    </div>
+    <div class="stat-card">
+        <h3>@Model.VirtualNetworkCount</h3>
+        <p>Virtual Networks</p>
+    </div>
+    <div class="stat-card">
+        <h3>@Model.StorageAccountCount</h3>
+        <p>Storage Accounts</p>
+    </div>
+    <div class="stat-card">
+        <h3>@Model.SqlDatabaseCount</h3>
+        <p>SQL Databases</p>
+    </div>
+</div>
+
+<!-- Resource Distribution Chart -->
+@if (Model.TotalResources > 0)
+{
+    <div class="card mt-4">
+        <div class="card-header">Resource Distribution</div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="resourceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Type Breakdown -->
+    <div class="card mt-4">
+        <div class="card-header">Resource Breakdown by Type</div>
+        <div class="card-body">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>@Model.VirtualMachineCount</h3>
+                    <p>Virtual Machines</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.VirtualNetworkCount</h3>
+                    <p>Virtual Networks</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.StorageAccountCount</h3>
+                    <p>Storage Accounts</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.SqlDatabaseCount</h3>
+                    <p>SQL Databases</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.SqlManagedInstanceCount</h3>
+                    <p>SQL Managed Instances</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.NetworkSecurityGroupCount</h3>
+                    <p>Network Security Groups</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.PublicIpCount</h3>
+                    <p>Public IP Addresses</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.LoadBalancerCount</h3>
+                    <p>Load Balancers</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.AppServiceCount</h3>
+                    <p>App Services</p>
+                </div>
+                <div class="stat-card">
+                    <h3>@Model.KeyVaultCount</h3>
+                    <p>Key Vaults</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Resources -->
+    @if (Model.RecentResources.Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header">Recently Discovered Resources</div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Resource Group</th>
+                            <th>Location</th>
+                            <th>Discovered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var resource in Model.RecentResources)
+                        {
+                            <tr>
+                                <td><strong>@resource.Name</strong></td>
+                                <td>
+                                    <span class="badge badge-secondary">
+                                        @(resource.Type.Split('/').LastOrDefault() ?? resource.Type)
+                                    </span>
+                                </td>
+                                <td>@resource.ResourceGroup</td>
+                                <td>@resource.Location</td>
+                                <td data-date="@resource.DiscoveredAt.ToString("o")">
+                                    @resource.DiscoveredAt.ToString("g")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="card text-center" style="padding: 3rem; margin-top: 2rem;">
+        <h3>No Resources Found</h3>
+        <p class="text-muted mt-2">Click "Sync Resources" to discover Azure resources for this customer</p>
+        <div class="mt-3">
+            <button onclick="syncCustomerResources(@Model.CustomerId, '@Model.CustomerName')" class="btn btn-success btn-lg">
+                Sync Resources Now
+            </button>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        @if (Model.TotalResources > 0)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                initializeResourceChart('resourceChart', @Model.CustomerId);
+            });
+            </text>
+        }
+    </script>
+}
