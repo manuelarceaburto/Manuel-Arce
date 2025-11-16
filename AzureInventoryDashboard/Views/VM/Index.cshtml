@@ -1,0 +1,161 @@
+@model List<VirtualMachineViewModel>
+@{
+    ViewData["Title"] = "Virtual Machines";
+    var customerId = (int)ViewData["CustomerId"]!;
+}
+
+<div class="page-header">
+    <h1>Virtual Machines</h1>
+    <div class="d-flex gap-2">
+        <a asp-controller="Inventory" asp-action="Index" asp-route-customerId="@customerId" class="btn btn-secondary">
+            Back to Inventory
+        </a>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card text-center" style="padding: 3rem;">
+        <h3>No Virtual Machines Found</h3>
+        <p class="text-muted mt-2">No VMs were discovered for this customer</p>
+        <div class="mt-3">
+            <a asp-controller="Inventory" asp-action="Index" asp-route-customerId="@customerId" class="btn btn-primary">
+                Back to Inventory
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Resource Group</th>
+                    <th>Location</th>
+                    <th>Size</th>
+                    <th>OS Type</th>
+                    <th>Power State</th>
+                    <th>Public IP</th>
+                    <th>Backup</th>
+                    <th>Disks</th>
+                    <th>NICs</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var vm in Model)
+                {
+                    <tr>
+                        <td><strong>@vm.Name</strong></td>
+                        <td>@vm.ResourceGroup</td>
+                        <td>@vm.Location</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(vm.VmSize))
+                            {
+                                <span class="badge badge-secondary">@vm.VmSize</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(vm.OsType))
+                            {
+                                <span class="badge badge-primary">@vm.OsType</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(vm.PowerState))
+                            {
+                                var badgeClass = vm.PowerState.Contains("running", StringComparison.OrdinalIgnoreCase) ? "badge-success" : "badge-secondary";
+                                <span class="badge @badgeClass">@vm.PowerState</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Unknown</span>
+                            }
+                        </td>
+                        <td>
+                            @if (vm.HasPublicIp)
+                            {
+                                <span class="badge badge-warning" title="@vm.PublicIpAddress">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No</span>
+                            }
+                        </td>
+                        <td>
+                            @if (vm.BackupEnabled)
+                            {
+                                <span class="badge badge-success">Enabled</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-danger">Disabled</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge badge-secondary">@vm.Disks.Count</span>
+                        </td>
+                        <td>
+                            <span class="badge badge-secondary">@vm.NetworkInterfaces.Count</span>
+                        </td>
+                        <td>
+                            <a asp-action="Metrics" asp-route-customerId="@customerId" asp-route-resourceId="@vm.ResourceId"
+                               class="btn btn-primary btn-sm">
+                                View Metrics
+                            </a>
+                        </td>
+                    </tr>
+                    <tr class="bg-tertiary" style="border-top: none;">
+                        <td colspan="11" style="padding: 0.5rem 0.75rem; background-color: var(--bg-primary);">
+                            <div style="font-size: 0.875rem;">
+                                <strong>Disks:</strong>
+                                @if (vm.Disks.Any())
+                                {
+                                    <span class="text-muted">@string.Join(", ", vm.Disks)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No disk information</span>
+                                }
+                                <br/>
+                                <strong>Network Interfaces:</strong>
+                                @if (vm.NetworkInterfaces.Any())
+                                {
+                                    <span class="text-muted">@string.Join(", ", vm.NetworkInterfaces)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">No NIC information</span>
+                                }
+                                @if (vm.HasPublicIp && !string.IsNullOrEmpty(vm.PublicIpAddress))
+                                {
+                                    <br/>
+                                    <strong>Public IP Address:</strong> <span class="text-muted">@vm.PublicIpAddress</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-3 text-muted">
+        <p>Total Virtual Machines: <strong>@Model.Count</strong></p>
+        <p>
+            Running: <strong>@Model.Count(vm => vm.PowerState?.Contains("running", StringComparison.OrdinalIgnoreCase) == true)</strong> |
+            With Public IP: <strong>@Model.Count(vm => vm.HasPublicIp)</strong> |
+            Backup Enabled: <strong>@Model.Count(vm => vm.BackupEnabled)</strong>
+        </p>
+    </div>
+}
